@@ -20,7 +20,7 @@
 # START - Declaration of Variables
 
 # Enter your LightManager Air IP
-LMA_IP='192.168.178.10'
+LMA_IP='xxx.xxx.xxx.xxx'
 
 # Weather Temp File
 LMA_TEMP='/tmp/weather.json'

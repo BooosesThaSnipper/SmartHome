@@ -1,4 +1,4 @@
-# LightManager Wheater Stats
+# LightManager Weather Stats
 Filename:	LmaWeatherStats.sh
 
 Author:		BooosesThaSnipper 
