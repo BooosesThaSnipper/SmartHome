@@ -48,6 +48,7 @@ gpg -a --export 8B48AD6246925553 | sudo apt-key add -
 
 
 Nun editieren wir noch die apt-config und ergängen sie um folgend Einträge:
+
 **sudo vi /etc/apt/apt.conf.d/50raspi**
 
 ```
@@ -87,9 +88,12 @@ sudo apt-get install grafana influxdb influxdb-client jq
 
 
 Nun solltet ihr wenn alles gut gelaufen ist, schon auf die Grafana Oberfläche zugreifen können:
+
 http://RaspberryIP:3000
 
 Logín: admin
+
 Passwort: admin
 
-Passwort solltet ihr natürlich ändern!
+
+** Passwort solltet ihr natürlich ändern! **
