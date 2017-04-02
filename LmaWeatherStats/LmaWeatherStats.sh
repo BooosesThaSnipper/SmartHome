@@ -39,9 +39,9 @@ DB='LightManager'
 # =========================================================================== #
 
 # Check if jq is installed
-STATUS_FPING=$( dpkg -s jq &> /dev/null; echo $? )
-if [ $STATUS_FPING -ne 0 ]; then
-	echo "fping is not installed"
+STATUS_JQ=$( dpkg -s jq &> /dev/null; echo $? )
+if [ $STATUS_JQ -ne 0 ]; then
+	echo "jq is not installed"
 	echo "Command for installing jq: \"sudo apt-get install jq\" "
 	exit 1
 fi
