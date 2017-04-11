@@ -3,7 +3,7 @@
 # =========================================================================== #
 # Filename:     PresenceCheck2Marker.sh
 # Author:       BooosesThaSnipper
-# Version:      0.2
+# Version:      0.3
 # Date:         2017-04-11
 # Project:      SmartHome
 # =========================================================================== #
@@ -59,13 +59,13 @@ if [ $STATUS_CURL -ne 0 ]; then
         exit 1
 fi
 
-DATE=$( date +%F-%N )
+DATE=$( date +%F_%H-%M-%S%N )
 echo "${DATE} - Start Presence Check"
 
 # Check if Smartphonees logged in"
 PRESENCE=0
 for SMARTPHONE in ${SMARTPHONE_IP}; do
-        DATE=$( date +%F-%N )
+        DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - ${SMARTPHONE} check running"
         sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
         sleep 1
@@ -80,26 +80,26 @@ for SMARTPHONE in ${SMARTPHONE_IP}; do
                 echo "Unexpeted Error during Host Check"
         fi
 
-        DATE=$( date +%F-%N )
+        DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - -----"
 done
 
 # Set Marker Depending from Presence Status
 if [ ${PRESENCE} -eq 1 ]; then
-        DATE=$( date +%F-%N )
+        DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - Presence activ"
         STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_ON} )
-        DATE=$( date +%F-%N )
+        DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
 else
-        DATE=$( date +%F-%N )
+        DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - Presence deactive"
         STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_OFF} )
-        DATE=$( date +%F-%N )
+        DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
 fi
 
-DATE=$( date +%F-%N )
+DATE=$( date +%F_%H-%M-%S%N )
 echo "${DATE} - -------------------------------------"
 
 # =========================================================================== #
