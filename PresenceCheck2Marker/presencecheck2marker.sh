@@ -3,8 +3,8 @@
 # =========================================================================== #
 # Filename:     PresenceCheck2Marker.sh
 # Author:       BooosesThaSnipper
-# Version:      0.1
-# Date:         2017-03-20
+# Version:      0.2
+# Date:         2017-04-11
 # Project:      SmartHome
 # =========================================================================== #
 # Description:
@@ -20,15 +20,18 @@
 # START - Declaration of Variables
 
 # Enter your LightManager Air IP
-LMA_IP='192.168.178.10'
+LMA_IP='xxx.xxx.xxx.xxx'
 
-# Enter the IP of the Host you want to check
-SMARTPHONE_IP='192.168.178.20 192.168.178.21 192.168.178.90'
++# Enter the IP of the Smartphones you want to check
++## for one Smartphone 
++# SMARTPHONE_IP='xxx.xxx.xxx.xxx'
++## for two or more use space seperated list
++SMARTPHONE_IP='xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx'
 
 # Enter The Numer of Scene which will activate the Marker
-SCENE_ON="100"
+SCENE_ON="xx"
 # Enter The Numer of Scene which will activate the Marker
-SCENE_OFF="101"
+SCENE_OFF="xx"
 
 # END - Declaration of Variables
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE
