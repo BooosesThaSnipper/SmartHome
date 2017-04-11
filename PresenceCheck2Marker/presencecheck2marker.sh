@@ -3,7 +3,7 @@
 # =========================================================================== #
 # Filename:     PresenceCheck2Marker.sh
 # Author:       BooosesThaSnipper
-# Version:      0.3
+# Version:      0.3.1
 # Date:         2017-04-11
 # Project:      SmartHome
 # =========================================================================== #
@@ -22,11 +22,11 @@
 # Enter your LightManager Air IP
 LMA_IP='xxx.xxx.xxx.xxx'
 
-+# Enter the IP of the Smartphones you want to check
-+## for one Smartphone 
-+# SMARTPHONE_IP='xxx.xxx.xxx.xxx'
-+## for two or more use space seperated list
-+SMARTPHONE_IP='xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx'
+# Enter the IP of the Smartphones you want to check
+## for one Smartphone 
+# SMARTPHONE_IP='xxx.xxx.xxx.xxx'
+## for two or more use space seperated list
+SMARTPHONE_IP='xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx'
 
 # Enter The Numer of Scene which will activate the Marker
 SCENE_ON="xx"
@@ -101,6 +101,24 @@ fi
 
 DATE=$( date +%F_%H-%M-%S%N )
 echo "${DATE} - -------------------------------------"
+
+# =========================================================================== #
+# ########################################################################### #
+
+# ########################################################################### #
+# =========================================================================== #
+# CleanUp Section
+
+unset LMA_IP
+unset SMARTPHONE_IP
+unset SCENE_ON
+unset SCENE_OFF
+unset STATUS_NMAP
+unset STATUS_CURL
+unset SMARTPHONE
+unset STATUS
+unset PRESENCE
+unset DATE
 
 # =========================================================================== #
 # ########################################################################### #
