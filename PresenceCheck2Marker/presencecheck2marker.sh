@@ -3,7 +3,7 @@
 # =========================================================================== #
 # Filename:     PresenceCheck2Marker.sh
 # Author:       BooosesThaSnipper
-# Version:      0.3.1
+# Version:      0.3.2
 # Date:         2017-04-11
 # Project:      SmartHome
 # =========================================================================== #
@@ -59,6 +59,14 @@ if [ $STATUS_CURL -ne 0 ]; then
         exit 1
 fi
 
+# Check if hping3 is installed
+STATUS_HPING3=$( dpkg -s hping3 &> /dev/null; echo $? )
+if [ $STATUS_HPING3 -ne 0 ]; then
+        echo "hping3 is not installed"
+        echo "Command for installing hping3: \"sudo apt-get install hping3\" "
+        exit 1
+fi
+
 DATE=$( date +%F_%H-%M-%S%N )
 echo "${DATE} - Start Presence Check"
 
@@ -68,14 +76,19 @@ for SMARTPHONE in ${SMARTPHONE_IP}; do
         DATE=$( date +%F_%H-%M-%S%N )
         echo "${DATE} - ${SMARTPHONE} check running"
         sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
+        sudo hping3 -2 -c 10 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
         sleep 1
-        if [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
-                DATE=$( date +%F-%N )
-                echo "${DATE} - $SMARTPHONE offline"
-        elif [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
-                DATE=$( date +%F-%N )
+        if [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
+                DATE=$( date +%F_%H-%M-%S%N )
                 echo "${DATE} - $SMARTPHONE online"
                 PRESENCE=1
+        elif [ $( arp -an | grep "${SMARTPHONE}" | grep -q "incomplete" ; echo $? ) -eq 1 ]; then
+                DATE=$( date +%F_%H-%M-%S%N )
+                echo "${DATE} - $SMARTPHONE online"
+                PRESENCE=1
+        elif [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
+                DATE=$( date +%F_%H-%M-%S%N )
+                echo "${DATE} - $SMARTPHONE offline"
         else
                 echo "Unexpeted Error during Host Check"
         fi
@@ -115,6 +128,7 @@ unset SCENE_ON
 unset SCENE_OFF
 unset STATUS_NMAP
 unset STATUS_CURL
+unset STATUS_HPING3
 unset SMARTPHONE
 unset STATUS
 unset PRESENCE
