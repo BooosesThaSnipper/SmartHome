@@ -3,8 +3,8 @@
 # =========================================================================== #
 # Filename:     PresenceCheck2Marker.sh
 # Author:       BooosesThaSnipper
-# Version:      0.3.2
-# Date:         2017-04-11
+# Version:      0.3.3
+# Date:         2017-04-12
 # Project:      SmartHome
 # =========================================================================== #
 # Description:
@@ -80,11 +80,11 @@ for SMARTPHONE in ${SMARTPHONE_IP}; do
         sleep 1
         if [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
-                echo "${DATE} - $SMARTPHONE online"
+                echo "${DATE} - $SMARTPHONE online #check 1"
                 PRESENCE=1
-        elif [ $( arp -an | grep "${SMARTPHONE}" | grep -q "incomplete" ; echo $? ) -eq 1 ]; then
+        elif [ $( /usr/sbin/arp -n ${SMARTPHONE} | grep -q incomplete; echo $? ) -eq 1 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
-                echo "${DATE} - $SMARTPHONE online"
+                echo "${DATE} - $SMARTPHONE online #check 2"
                 PRESENCE=1
         elif [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
