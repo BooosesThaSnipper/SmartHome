@@ -3,8 +3,8 @@
 # =========================================================================== #
 # Filename:     PresenceCheck2Marker.sh
 # Author:       BooosesThaSnipper
-# Version:      0.3.3
-# Date:         2017-04-12
+# Version:      0.3.4
+# Date:         2017-04-20
 # Project:      SmartHome
 # =========================================================================== #
 # Description:
@@ -22,18 +22,21 @@
 # Enter your LightManager Air IP
 LMA_IP='xxx.xxx.xxx.xxx'
 
-# Enter the IP of the Smartphones you want to check
+# Enter the IP of the Smartphones you want to check without any leading zero
 ## for one Smartphone 
 # SMARTPHONE_IP='xxx.xxx.xxx.xxx'
 ## for two or more use space seperated list
 SMARTPHONE_IP='xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx xxx.xxx.xxx.xxx'
 
 # Enter The Numer of Scene which will activate the Marker
-SCENE_ON="xx"
+SCENE_ON='xx'
 # Enter The Numer of Scene which will activate the Marker
-SCENE_OFF="xx"
+SCENE_OFF='xx'
 
-# END - Declaration of Variables
+# Enter the Number of the Marker you want to modify (1 - 32)
+MARKER='xx'
+
+# END - Declaration of Variables 
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE
 # =========================================================================== #
 # ########################################################################### #
@@ -46,17 +49,17 @@ SCENE_OFF="xx"
 # Check if netcat is installed
 STATUS_NMAP=$( dpkg -s nmap &> /dev/null; echo $? )
 if [ $STATUS_NMAP -ne 0 ]; then
-        echo "nmap is not installed"
-        echo "Command for installing nmap: \"sudo apt-get install nmap\" "
-        exit 1
+	echo "nmap is not installed"
+	echo "Command for installing nmap: \"sudo apt-get install nmap\" "
+	exit 1
 fi
 
 # Check if curl is installed
 STATUS_CURL=$( dpkg -s curl &> /dev/null; echo $? )
 if [ $STATUS_CURL -ne 0 ]; then
-        echo "curl is not installed"
-        echo "Command for installing curl: \"sudo apt-get install curl\" "
-        exit 1
+	echo "curl is not installed"
+	echo "Command for installing curl: \"sudo apt-get install curl\" "
+	exit 1
 fi
 
 # Check if hping3 is installed
@@ -67,49 +70,62 @@ if [ $STATUS_HPING3 -ne 0 ]; then
         exit 1
 fi
 
+
 DATE=$( date +%F_%H-%M-%S%N )
 echo "${DATE} - Start Presence Check"
 
 # Check if Smartphonees logged in"
 PRESENCE=0
 for SMARTPHONE in ${SMARTPHONE_IP}; do
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - ${SMARTPHONE} check running"
-        sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
-        sudo hping3 -2 -c 10 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
-        sleep 1
+	DATE=$( date +%F_%H-%M-%S%N )
+	echo "${DATE} - ${SMARTPHONE} check running"
+	sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
+	sudo hping3 -2 -c 10 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
+	sleep 1
         if [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
                 echo "${DATE} - $SMARTPHONE online #check 1"
                 PRESENCE=1
-        elif [ $( /usr/sbin/arp -n ${SMARTPHONE} | grep -q incomplete; echo $? ) -eq 1 ]; then
-                DATE=$( date +%F_%H-%M-%S%N )
-                echo "${DATE} - $SMARTPHONE online #check 2"
-                PRESENCE=1
+	elif [ $( /usr/sbin/arp -n ${SMARTPHONE} | grep -q incomplete; echo $? ) -eq 1 ]; then
+		DATE=$( date +%F_%H-%M-%S%N )
+		echo "${DATE} - $SMARTPHONE online #check 2"
+		PRESENCE=1
         elif [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
                 echo "${DATE} - $SMARTPHONE offline"
-        else
+        else   
                 echo "Unexpeted Error during Host Check"
-        fi
-
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - -----"
+	fi
+	
+	DATE=$( date +%F_%H-%M-%S%N )
+	echo "${DATE} - -----"
 done
 
-# Set Marker Depending from Presence Status
-if [ ${PRESENCE} -eq 1 ]; then
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - Presence activ"
-        STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_ON} )
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+# Get actual Marker Status from LMA
+PARAMS_TEMP='/tmp/params.json'
+curl -s http://${LMA_IP}/params.json > ${PARAMS_TEMP}
+MARKER_STATUS=$( printf  "%32.${MARKER}s\n" $( jq -r '.["marker state"]' ${PARAMS_TEMP} ) | awk '{print substr($0,length,1)}' )
+rm -f ${PARAMS_TEMP}
+
+# Check if Marker Status differ from Presence Status
+if [ ${MARKER_STATUS} -eq ${PRESENCE} ]; then
+	DATE=$( date +%F_%H-%M-%S%N )
+	echo "${DATE} - no Marker-Update needed"
 else
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - Presence deactive"
-        STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_OFF} )
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+	# Set Marker Depending from Presence Status
+	if [ ${PRESENCE} -eq 1 ]; then
+		DATE=$( date +%F_%H-%M-%S%N )
+		echo "${DATE} - Presence activ"
+		STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_ON} )
+		DATE=$( date +%F_%H-%M-%S%N )
+		echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+	else 
+		DATE=$( date +%F_%H-%M-%S%N )
+		echo "${DATE} - Presence deactive"
+		STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_OFF} )
+		DATE=$( date +%F_%H-%M-%S%N )
+		echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+	fi
 fi
 
 DATE=$( date +%F_%H-%M-%S%N )
@@ -131,6 +147,9 @@ unset STATUS_CURL
 unset STATUS_HPING3
 unset SMARTPHONE
 unset STATUS
+unset MARKER_STATUS
+unset MARKER
+unset PARAMS_TEMP
 unset PRESENCE
 unset DATE
 
