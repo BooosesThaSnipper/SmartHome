@@ -70,6 +70,26 @@ if [ $STATUS_HPING3 -ne 0 ]; then
         exit 1
 fi
 
+# Log Variables
+LOG_AGE="14"
+LOG_DIR="${HOME}/batch_logs"
+LOG_DATE=$( date '+%F' )
+LOG_FILE="${LOG_DIR}/presencecheck2marker.${LOG_DATE}"
+LOG_LINK="${LOG_DIR}/presencecheck2marker"
+
+# Check if Log Dir exists, if not it will create it
+if [ ! -d ${LOG_DIR} ]; then
+        mkdir -p ${LOG_DIR}
+fi
+
+# Check if Symlink to latest log exists
+if [ ! -L ${LOG_LINK} ]; then
+        ln -s ${LOG_FILE} ${LOG_LINK}
+else
+        unlink ${LOG_LINK}
+        ln -s ${LOG_FILE} ${LOG_LINK}
+fi
+
 
 DATE=$( date +%F_%H-%M-%S%N )
 echo "${DATE} - Start Presence Check"
@@ -78,27 +98,27 @@ echo "${DATE} - Start Presence Check"
 PRESENCE=0
 for SMARTPHONE in ${SMARTPHONE_IP}; do
 	DATE=$( date +%F_%H-%M-%S%N )
-	echo "${DATE} - ${SMARTPHONE} check running"
+	echo "${DATE} - ${SMARTPHONE} check running" >> ${LOG_FILE}
 	sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
 	sudo hping3 -2 -c 10 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
 	sleep 1
         if [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
-                echo "${DATE} - $SMARTPHONE online #check 1"
+                echo "${DATE} - $SMARTPHONE online #check 1" >> ${LOG_FILE}
                 PRESENCE=1
 	elif [ $( /usr/sbin/arp -n ${SMARTPHONE} | grep -q incomplete; echo $? ) -eq 1 ]; then
 		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - $SMARTPHONE online #check 2"
+		echo "${DATE} - $SMARTPHONE online #check 2" >> ${LOG_FILE}
 		PRESENCE=1
         elif [ $( sudo nmap -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
                 DATE=$( date +%F_%H-%M-%S%N )
-                echo "${DATE} - $SMARTPHONE offline"
+                echo "${DATE} - $SMARTPHONE offline" >> ${LOG_FILE}
         else   
-                echo "Unexpeted Error during Host Check"
+                echo "Unexpeted Error during Host Check" >> ${LOG_FILE}
 	fi
 	
 	DATE=$( date +%F_%H-%M-%S%N )
-	echo "${DATE} - -----"
+	echo "${DATE} - -----" >> ${LOG_FILE}
 done
 
 # Get actual Marker Status from LMA
@@ -110,26 +130,29 @@ rm -f ${PARAMS_TEMP}
 # Check if Marker Status differ from Presence Status
 if [ ${MARKER_STATUS} -eq ${PRESENCE} ]; then
 	DATE=$( date +%F_%H-%M-%S%N )
-	echo "${DATE} - no Marker-Update needed"
+	echo "${DATE} - no Marker-Update needed" >> ${LOG_FILE}
 else
 	# Set Marker Depending from Presence Status
 	if [ ${PRESENCE} -eq 1 ]; then
 		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - Presence activ"
+		echo "${DATE} - Presence activ" >> ${LOG_FILE}
 		STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_ON} )
 		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+		echo "${DATE} - LightManager Marker Update Status: ${STATUS}" >> ${LOG_FILE}
 	else 
 		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - Presence deactive"
+		echo "${DATE} - Presence deactive" >> ${LOG_FILE}
 		STATUS=$( curl -s http://${LMA_IP}/control?key=${SCENE_OFF} )
 		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+		echo "${DATE} - LightManager Marker Update Status: ${STATUS}" >> ${LOG_FILE}
 	fi
 fi
 
 DATE=$( date +%F_%H-%M-%S%N )
-echo "${DATE} - -------------------------------------"
+echo "${DATE} - -------------------------------------" >> ${LOG_FILE}
+
+# Delete old Logfiles
+find ${LOG_DIR} -type f -name "presencecheck2marker*" -mtime ${LOG_AGE} -exec rm {} \;
 
 # =========================================================================== #
 # ########################################################################### #
@@ -152,6 +175,11 @@ unset MARKER
 unset PARAMS_TEMP
 unset PRESENCE
 unset DATE
+unset LOG_AGE
+unset LOG_DIR
+unset LOG_DATE
+unset LOG_FILE
+unset LOG_LINK
 
 # =========================================================================== #
 # ########################################################################### #
