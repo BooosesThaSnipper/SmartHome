@@ -3,7 +3,7 @@
 # =========================================================================== #
 # Filename:	PresenceCheck2Marker.sh
 # Author:	BooosesThaSnipper
-# Version:	0.4.1
+# Version:	0.4.2
 # Date:		2017-11-19
 # Project:	SmartHome
 # =========================================================================== #
@@ -133,6 +133,7 @@ for SMARTPHONE in ${SMARTPHONE_IP}; do
 	sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
 	# tries to wake up phone if it sleeps
 	sudo ${BIN_HPING3} -2 -c 50 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
+	sudo ${BIN_HPING3} -1 -c 50 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
 
 	# wait a short moment
 	sleep 1
@@ -149,7 +150,7 @@ for SMARTPHONE in ${SMARTPHONE_IP}; do
 		PRESENCE=1
 
 	# check if Smartphone's MAC is correct in the local arp table
-	elif [ $( sudo ${BIN_ARP} -n ${SMARTPHONE} | grep -q -E '(incomplete|no entry|unvollständig|kein Eintrag)'; echo $? ) -eq 1 ]; then
+	elif [ $( sudo ${BIN_ARP} -n ${SMARTPHONE} | grep -q -E '([[:xdigit:]]{1,2}:){5}[[:xdigit:]]{1,2}'; echo $? ) -eq 0 ]; then
 		echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} online #check 2"
 
 		# Debug Logging
