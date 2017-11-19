@@ -35,6 +35,9 @@ SCENE_OFF='xx'
 # Enter the Number of the Marker you want to modify (1 - 32)
 MARKER='xx'
 
+# Debug Mode - 0 = off - 1 = on
+DEBUG='0'
+
 # END - Declaration of Variables 
 # DO NOT CHANGE ANYTHING ABOVE THIS LINE
 # =========================================================================== #
@@ -59,7 +62,7 @@ for PACKAGE in ${PACKAGES}; do
 done
 
 # Define binary Path
-BIN_ARP=$( which arp )
+BIN_ARP=$( sudo which arp )
 BIN_BC=$( which bc )
 BIN_CURL=$( which curl )
 BIN_HPING3=$( which hping3 )
@@ -78,9 +81,10 @@ BIN_WC=$( which wc )
 # Log Variables
 LOG_AGE="14"
 LOG_DIR="${HOME}/Cron_Logs"
+LOG_NAME=$( basename -a -s .sh $0 )
 LOG_DATE=$( date '+%F' )
-LOG_FILE="${LOG_DIR}/presencecheck2marker.${LOG_DATE}"
-LOG_LINK="${LOG_DIR}/presencecheck2marker"
+LOG_FILE="${LOG_DIR}/${LOG_NAME}.${LOG_DATE}"
+LOG_LINK="${LOG_DIR}/${LOG_NAME}"
 
 # Check if Log Directory exists, if not create it
 if [ ! -d ${LOG_DIR} ]; then
@@ -89,14 +93,14 @@ fi
 
 # Check if Symlink to latest log exists
 if [ ! -L ${LOG_LINK} ]; then
-        ln -s ${LOG_FILE} ${LOG_LINK}
+		ln -s ${LOG_FILE} ${LOG_LINK}
 else
-        unlink ${LOG_LINK}
-        ln -s ${LOG_FILE} ${LOG_LINK}
+		unlink ${LOG_LINK}
+		ln -s ${LOG_FILE} ${LOG_LINK}
 fi
 
 # Delete old Logfiles
-find ${LOG_DIR} -type f -name "presencecheck2marker*" -mtime ${LOG_AGE} -exec rm {} \;
+find ${LOG_DIR} -type f -name "${LOG_NAME}*" -mtime ${LOG_AGE} -exec rm {} \;
 
 # =========================================================================== #
 # ########################################################################### #
@@ -106,35 +110,80 @@ find ${LOG_DIR} -type f -name "presencecheck2marker*" -mtime ${LOG_AGE} -exec rm
 # =========================================================================== #
 # Check Online Status of Smartphones
 
-DATE=$( date +%F_%H-%M-%S%N )
-echo "${DATE} - Start Presence Check"
+echo "$( date +%F_%H-%M-%S%N ) - Start Presence Check"
+
+# Debug Logging
+if [ ${DEBUG} -eq 1 ]; then
+	echo "$( date +%F_%H-%M-%S%N ) - Start Presence Check" >> ${LOG_FILE}
+fi
 
 # Check if Smartphonees logged in"
 PRESENCE=0
 for SMARTPHONE in ${SMARTPHONE_IP}; do
-	DATE=$( date +%F_%H-%M-%S%N )
-	echo "${DATE} - ${SMARTPHONE} check running"
-	sudo ${BIN_ARP} -d ${SMARTPHONE}
+	echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} check running"
+
+	# Debug Logging
+	if [ ${DEBUG} -eq 1 ]; then
+		echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} check running" >> ${LOG_FILE}
+	fi
+
+	# Delete ARP Entry for Smartphone
+	sudo ${BIN_ARP} -d ${SMARTPHONE} > /dev/null 2>&1
+	# do a short nmap network scan
 	sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078 > /dev/null
+	# tries to wake up phone if it sleeps
 	sudo ${BIN_HPING3} -2 -c 50 -p 5353 --fast ${SMARTPHONE} > /dev/null 2>&1
+
+	# wait a short moment
 	sleep 1
-    if [ $( sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - ${SMARTPHONE} online #check 1"
-        PRESENCE=1
-	elif [ $( ${BIN_ARP} -n ${SMARTPHONE} | grep -q incomplete; echo $? ) -eq 1 ]; then
-		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - ${SMARTPHONE} online #check 2"
+
+	# check if Smartphone is reachable through a fast network scan
+	if [ $( sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host is up" ; echo $? ) -eq 0 ]; then
+		echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} online #check 1"
+	
+		# Debug Logging
+		if [ ${DEBUG} -eq 1 ]; then
+			echo "$( date +%F_%H-%M-%S%N ) - sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078" >> ${LOG_FILE}
+			echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} online #check 1" >> ${LOG_FILE}
+		fi
 		PRESENCE=1
-    elif [ $( sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
-        DATE=$( date +%F_%H-%M-%S%N )
-        echo "${DATE} - ${SMARTPHONE} offline"
-    else   
-        echo "Unexpeted Error during Host Check"
+
+	# check if Smartphone's MAC is correct in the local arp table
+	elif [ $( sudo ${BIN_ARP} -n ${SMARTPHONE} | grep -q -E '(incomplete|no entry)'; echo $? ) -eq 1 ]; then
+		echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} online #check 2"
+
+		# Debug Logging
+		if [ ${DEBUG} -eq 1 ]; then
+			echo "$( date +%F_%H-%M-%S%N ) - sudo ${BIN_ARP} -n ${SMARTPHONE}" >> ${LOG_FILE}
+			echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} online #check 2" >> ${LOG_FILE}
+		fi		
+		PRESENCE=1
+
+	# If both checks are negativ, it seems smarthone is offline, but dopple check it
+	elif [ $( sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078 | grep -q "Host seems down"; echo $? )  -eq 0 ]; then
+		echo "$$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} offline"
+		
+		# Debug Logging
+		if [ ${DEBUG} -eq 1 ]; then
+			echo "$( date +%F_%H-%M-%S%N ) - sudo ${BIN_NMAP} -sU -sT ${SMARTPHONE} -p U:5353,T:62078" >> ${LOG_FILE}
+			echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} offline" >> ${LOG_FILE}
+		fi
+
+	# Error Handling
+	else
+		echo "Unexpeted Error during Host Check"
+
+		# Debug Logging
+		if [ ${DEBUG} -eq 1 ]; then
+			echo "Unexpeted Error during Host Check" >> ${LOG_FILE}
+		fi
 	fi
 	
-	DATE=$( date +%F_%H-%M-%S%N )
-	echo "${DATE} - -----"
+	# for pretty logfile
+	echo "$( date +%F_%H-%M-%S%N ) - -----"
+	if [ ${DEBUG} -eq 1 ]; then
+		echo "$( date +%F_%H-%M-%S%N ) - -----" >> ${LOG_FILE}
+	fi
 done
 
 # =========================================================================== #
@@ -154,29 +203,42 @@ rm -f ${PARAMS_TEMP}
 
 # Check if Marker Status differ from Presence Status
 if [ ${MARKER_STATUS} -eq ${PRESENCE} ]; then
-	DATE=$( date +%F_%H-%M-%S%N )
-	echo "${DATE} - no Marker-Update needed"
+	echo "$( date +%F_%H-%M-%S%N ) - no Marker-Update needed"
+	
+	# Debug Logging
+	if [ ${DEBUG} -eq 1 ]; then
+		echo "$( date +%F_%H-%M-%S%N ) - no Marker-Update needed" >> ${LOG_FILE}
+	fi	
 else
 	# Set Marker Depending from Presence Status
 	if [ ${PRESENCE} -eq 1 ]; then
-		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - Presence activ"
-		echo "${DATE} - Presence activ" >> ${LOG_FILE}
+		echo "$( date +%F_%H-%M-%S%N ) - Presence activ"
+		echo "$( date +%F_%H-%M-%S%N ) - Presence activ" >> ${LOG_FILE}
 		STATUS=$( ${BIN_CURL} -s http://${LMA_IP}/control?key=${SCENE_ON} )
-		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+		echo "$( date +%F_%H-%M-%S%N ) - LightManager Marker Update Status: ${STATUS}"
+		
+		# Debug Logging
+		if [ ${DEBUG} -eq 1 ]; then
+			echo "$( date +%F_%H-%M-%S%N ) - LightManager Marker Update Status: ${STATUS}" >> ${LOG_FILE}
+		fi
 	else 
-		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - Presence deactive"
-		echo "${DATE} - Presence deactive" >> ${LOG_FILE}
+		echo "$( date +%F_%H-%M-%S%N ) - Presence deactive"
+		echo "$( date +%F_%H-%M-%S%N ) - Presence deactive" >> ${LOG_FILE}
 		STATUS=$( ${BIN_CURL} -s http://${LMA_IP}/control?key=${SCENE_OFF} )
-		DATE=$( date +%F_%H-%M-%S%N )
-		echo "${DATE} - LightManager Marker Update Status: ${STATUS}"
+		echo "$( date +%F_%H-%M-%S%N ) - LightManager Marker Update Status: ${STATUS}"
+		
+		# Debug Logging
+		if [ ${DEBUG} -eq 1 ]; then
+			echo "$( date +%F_%H-%M-%S%N ) - LightManager Marker Update Status: ${STATUS}" >> ${LOG_FILE}
+		fi
 	fi
 fi
 
-DATE=$( date +%F_%H-%M-%S%N )
-echo "${DATE} - -------------------------------------"
+# for pretty logfile
+echo "$( date +%F_%H-%M-%S%N ) - -------------------------------------"
+if [ ${DEBUG} -eq 1 ]; then
+	echo "$( date +%F_%H-%M-%S%N ) - -------------------------------------" >> ${LOG_FILE}
+fi
 
 # =========================================================================== #
 # ########################################################################### #
@@ -206,7 +268,6 @@ unset BIN_HPING3
 unset BIN_JQ
 unset BIN_NMAP
 unset BIN_WC
-unset DATE
 unset SMARTPHONE
 unset PRESENCE
 unset PARAMS_TEMP
