@@ -3,7 +3,7 @@
 # =========================================================================== #
 # Filename:	PresenceCheck2Marker.sh
 # Author:	BooosesThaSnipper
-# Version:	0.4.0
+# Version:	0.4.1
 # Date:		2017-11-19
 # Project:	SmartHome
 # =========================================================================== #
@@ -149,7 +149,7 @@ for SMARTPHONE in ${SMARTPHONE_IP}; do
 		PRESENCE=1
 
 	# check if Smartphone's MAC is correct in the local arp table
-	elif [ $( sudo ${BIN_ARP} -n ${SMARTPHONE} | grep -q -E '(incomplete|no entry)'; echo $? ) -eq 1 ]; then
+	elif [ $( sudo ${BIN_ARP} -n ${SMARTPHONE} | grep -q -E '(incomplete|no entry|unvollständig|kein Eintrag)'; echo $? ) -eq 1 ]; then
 		echo "$( date +%F_%H-%M-%S%N ) - ${SMARTPHONE} online #check 2"
 
 		# Debug Logging
